@@ -178,6 +178,17 @@ async function run() {
       res.send(wishlist);
     })
 
+    // Remove from wishlist
+    app.patch('/wishlist/remove', async (req, res) => {
+      const {userEmail, productId} = req.body;
+
+      const result = await userCollection.updateOne(
+        {email: userEmail},
+        {$pull: {wishlist: new ObjectId(String(productId))}}
+      );
+      res.send(result)
+    })
+
 
   } catch(error){
     console.log(error.name, error.message)
