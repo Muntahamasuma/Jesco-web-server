@@ -6,9 +6,18 @@ const jwt = require('jsonwebtoken');
 const app = express();
 
 const port = process.env.PORT || 5000;
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://jesco-the-final-run.web.app/',
+    'https://jesco-the-final-run.firebaseapp.com/' 
+  ],
+  credentials: true,
+  optionSuccessStatus: 200,
+}
 
 // middleware
-app.use(cors());
+app.use(cors({corsOptions}));
 app.use(express.json());
 
 // token verification
@@ -140,7 +149,7 @@ async function run() {
       res.json({ products, totalProducts, categories });
     });
 
-    // 
+    // add to wishlist
     app.patch('/wishlist/add', async (req, res) => {
       const {userEmail, productId} = req.body;
 
@@ -151,9 +160,27 @@ async function run() {
       res.send(result)
     })
 
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+
+    // get Data from wishlist
+    app.get('/wishlist/:userId', verifyJWT, async(req, res)=>{
+      const userId = req.params.userId;
+
+      const user = await userCollection.findOne({_id: new ObjectId(String(userId))});
+
+      if(!user){
+        return res.send({message: "User not found"})
+      }
+
+      const wishlist = await productCollection
+      .find({_id: {$in: user.wishlist || []}})
+      .toArray();
+
+      res.send(wishlist);
+    })
+
+
+  } catch(error){
+    console.log(error.name, error.message)
   }
 }
 run().catch(console.dir);
