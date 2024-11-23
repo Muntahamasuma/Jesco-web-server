@@ -1,6 +1,7 @@
 const cors = require("cors");
 const express = require("express");
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -43,11 +44,50 @@ async function run() {
 
     app.get('/addproducts', async (req, res) => {
         
-        const products = await productCollection.find().toArray();
-        res.send(products)
+        const products = await productCollection.find().limit(8).toArray();
+        res.send({products})
     });
 
-    
+     // get product
+     app.get("/all-products", async (req, res) => {
+      const {
+        title,
+        sort = "asc",
+        category,
+        page = 1,
+        limit = 6,
+      } = req.query;
+
+      const query = {};
+
+      if (title) {
+        query.title = { $regex: title, $options: "i" };
+      }
+      if (category) {
+        query.category = { $regex: category, $options: "i" };
+      }
+
+      const pageNumber = Number(page);
+      const limitNumber = Number(limit);
+
+      const sortOption = sort === "asc" ? 1 : -1;
+
+      const products = await productCollection
+        .find(query)
+        .skip((pageNumber - 1) * limitNumber)
+        .limit(limitNumber)
+        .sort({ price: sortOption })
+        .toArray();
+
+      const totalProducts = await productCollection.countDocuments(query);
+
+      const categories = [
+        ...new Set(products.map((product) => product.category)),
+      ];
+
+      res.json({ products, totalProducts, categories });
+    });
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
